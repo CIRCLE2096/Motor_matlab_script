@@ -17,8 +17,7 @@ try
     Com_num =[station_num; fun_write_D; address_position; address_num_2; Byte_num_4];
     Com_num = hex_add_single(Com_num,position);
     crc = crc16_modbus(Com_num);
-    Com_num = [Com_num; crc]
-    disp('*******');
+    Com_num = [Com_num; crc];
     Com_num = hex2dec(Com_num);
     fwrite(port,Com_num);
 catch e
