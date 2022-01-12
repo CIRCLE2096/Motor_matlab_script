@@ -2,6 +2,9 @@
 % - Synchronous acquisition into a single RcvBuffer frame.
 clear all
 
+P.startDepth = 0;   % Acquisition depth in wavelengths
+P.endDepth = 200;   % This should preferrably be a multiple of 128 samples.
+
 % Specify system parameters.
 Resource.Parameters.numTransmit = 128;  % number of transmit channels.
 Resource.Parameters.numRcvChannels = 128;  % number of receive channels.
@@ -19,7 +22,7 @@ Media.MP(1,:) = [0,0,100,1.0]; % [x, y, z, reflectivity]
 Trans.name = 'P4-1';
 Trans.units = 'wavelengths'; % required in Gen3 to prevent default to mm units
 Trans = computeTrans(Trans);
-Trans.maxHighVoltage = 5;  % set maximum high voltage limit for pulser supply.
+Trans.maxHighVoltage = 10;  % set maximum high voltage limit for pulser supply.
 
 % Specify PData structure array.
 PData(1).PDelta = [Trans.spacing, 0, 0.5];
@@ -59,13 +62,14 @@ TX(1).waveform = 1; % use 1st TW structure.
 TX(1).focus = 0;
 TX(1).Apod = ones(1,Trans.numelements);
 TX(1).Delay = computeTXDelays(TX(1));
+
 % Specify TGC Waveform structure.
 TGC(1).CntrlPts = [500,590,650,710,770,830,890,950];
 TGC(1).rangeMax = 200;
 TGC(1).Waveform = computeTGCWaveform(TGC);
 
 % Specify Receive structure array.
-Receive(1).Apod = ones(1,128); % if 64ch Vantage, = [ones(1,64) zeros(1,64)];
+Receive(1).Apod = ones(1,Trans.numelements); % if 64ch Vantage, = [ones(1,64) zeros(1,64)];
 Receive(1).startDepth = 0;
 Receive(1).endDepth = 200;
 Receive(1).TGC = 1; % Use the first TGC waveform defined above
@@ -102,15 +106,32 @@ Process(1).Parameters = {'srcbuffer','none',... % name of buffer to process.
 
 % Specify an external processing event.
 Process(2).classname = 'External';
-Process(2).method = 'myProcFunction';
+Process(2).method = 'save_receive';
 Process(2).Parameters = {'srcbuffer','receive',... % name of buffer to process.
+'srcbufnum',1,...
+'srcframenum',-1,...
+'dstbuffer','none'};
+
+% Specify an external processing event.
+Process(3).classname = 'External';
+Process(3).method = 'save_inter';
+Process(3).Parameters = {'srcbuffer','inter',... % name of buffer to process.
 'srcbufnum',1,...
 'srcframenum',1,...
 'dstbuffer','none'};
 
-Process(3).classname = 'Image';
-Process(3).method = 'imageDisplay';
-Process(3).Parameters = {'imgbufnum',1,...   % number of buffer to process.
+% Specify an external processing event.
+Process(4).classname = 'External';
+Process(4).method = 'save_image';
+Process(4).Parameters = {'srcbuffer','image',... % name of buffer to process.
+'srcbufnum',1,...
+'srcframenum',-1,...
+'dstbuffer','none'};
+
+
+Process(5).classname = 'Image';
+Process(5).method = 'imageDisplay';
+Process(5).Parameters = {'imgbufnum',1,...   % number of buffer to process.
                          'framenum',-1,...   % (-1 => lastFrame)
                          'pdatanum',1,...    % number of PData structure to use
                          'pgain',1.0,...            % pgain is image processing gain
@@ -126,51 +147,71 @@ Process(3).Parameters = {'imgbufnum',1,...   % number of buffer to process.
                          'display',1,...      % display image after processing
                          'displayWindow',1};
 
+                     
+                     
 
-% Specify sequence events.
-Event(1).info = 'Acquire RF Data.';
-Event(1).tx = 1; % use 1st TX structure.
-Event(1).rcv = 1; % use 1st Rcv structure.
+SeqControl(3).command = 'waitForTransferComplete';
+SeqControl(3).argument = 2;
+SeqControl(4).command = 'markTransferProcessed';
+SeqControl(4).argument = 2;
+SeqControl(5).command = 'sync';
+
+%Specify sequence events.
+Event(1).info = 'Call external Processing function1.';
+Event(1).tx = 0; % no TX structure.
+Event(1).rcv = 0; % no Rcv structure.
 Event(1).recon = 0; % no reconstruction.
-Event(1).process = 0; % no processing
-Event(1).seqControl = [1,2]; 
+Event(1).process = 1; % call processing function
+Event(1).seqControl = [3,4,5]; % wait for data to be transferred 
+
+Event(2).info = 'Acquire RF Data.';
+Event(2).tx = 1; % use 1st TX structure.
+Event(2).rcv = 1; % use 1st Rcv structure.
+Event(2).recon = 0; % no reconstruction.
+Event(2).process = 0; % no processing
+Event(2).seqControl = [1,2]; 
  SeqControl(1).command = 'timeToNextAcq';
  SeqControl(1).argument = 500000;
  SeqControl(2).command = 'transferToHost';
-Event(2).info = 'Reconstruct';
-Event(2).tx = 0;
-Event(2).rcv = 0;
-Event(2).recon = 1;
-Event(2).process = 3;
-Event(3).info = 'Call external Processing function1.';
-Event(3).tx = 0; % no TX structure.
-Event(3).rcv = 0; % no Rcv structure.
-Event(3).recon = 0; % no reconstruction.
-Event(3).process = 1; % call processing function
-Event(3).seqControl = [3,4,5]; % wait for data to be transferred 
- SeqControl(3).command = 'waitForTransferComplete';
- SeqControl(3).argument = 2;
- SeqControl(4).command = 'markTransferProcessed';
- SeqControl(4).argument = 2;
- SeqControl(5).command = 'sync';
+ 
+Event(3).info = 'Reconstruct';
+Event(3).tx = 0;
+Event(3).rcv = 0;
+Event(3).recon = 1;
+Event(3).process = 5;
+
+
+
+
 Event(4).info = 'Call external Processing function2.';
 Event(4).tx = 0; % no TX structure.
 Event(4).rcv = 0; % no Rcv structure.
 Event(4).recon = 0; % no reconstruction.
 Event(4).process = 2; % call processing function
 Event(4).seqControl = [3,4,5]; % wait for data to be transferred 
- SeqControl(3).command = 'waitForTransferComplete';
- SeqControl(3).argument = 2;
- SeqControl(4).command = 'markTransferProcessed';
- SeqControl(4).argument = 2;
- SeqControl(5).command = 'sync';
 
-Event(5).info = 'Jump back to Event 1.';
+ 
+Event(5).info = 'Call external Processing function3.';
 Event(5).tx = 0; % no TX structure.
 Event(5).rcv = 0; % no Rcv structure.
 Event(5).recon = 0; % no reconstruction.
-Event(5).process = 0; % no processing
-Event(5).seqControl = 6; % jump back to Event 1
+Event(5).process = 3; % call processing function
+Event(5).seqControl = [3,4,5]; % wait for data to be transferred 
+
+
+Event(6).info = 'Call external Processing function3.';
+Event(6).tx = 0; % no TX structure.
+Event(6).rcv = 0; % no Rcv structure.
+Event(6).recon = 0; % no reconstruction.
+Event(6).process = 4; % call processing function
+Event(6).seqControl = [3,4,5]; % wait for data to be transferred 
+
+Event(7).info = 'Jump back to Event 1.';
+Event(7).tx = 0; % no TX structure.
+Event(7).rcv = 0; % no Rcv structure.
+Event(7).recon = 0; % no reconstruction.
+Event(7).process = 0; % no processing
+Event(7).seqControl = 6; % jump back to Event 1
  SeqControl(6).command = 'jump';
  SeqControl(6).argument = 1;
  
@@ -187,7 +228,7 @@ UI(1).Callback = text2cell('%CB#1');
 %EF(1).Function = text2cell('%EF#1');
 
 % Save all the structures to a .mat file.
-save('Synchronous_SetUpL11_4vAcquireRF');
+save('Synchronous_SetUpP4_1AcquireRF2');
 return % Place this return to prevent executing code below
 
 %CB#1
