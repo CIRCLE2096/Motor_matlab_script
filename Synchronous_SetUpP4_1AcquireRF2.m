@@ -157,54 +157,52 @@ SeqControl(4).argument = 2;
 SeqControl(5).command = 'sync';
 
 %Specify sequence events.
-Event(1).info = 'Call external Processing function1.';
-Event(1).tx = 0; % no TX structure.
-Event(1).rcv = 0; % no Rcv structure.
+
+
+Event(1).info = 'Acquire RF Data.';
+Event(1).tx = 1; % use 1st TX structure.
+Event(1).rcv = 1; % use 1st Rcv structure.
 Event(1).recon = 0; % no reconstruction.
-Event(1).process = 1; % call processing function
-Event(1).seqControl = [3,4,5]; % wait for data to be transferred 
-
-Event(2).info = 'Acquire RF Data.';
-Event(2).tx = 1; % use 1st TX structure.
-Event(2).rcv = 1; % use 1st Rcv structure.
-Event(2).recon = 0; % no reconstruction.
-Event(2).process = 0; % no processing
-Event(2).seqControl = [1,2]; 
- SeqControl(1).command = 'timeToNextAcq';
- SeqControl(1).argument = 500000;
+Event(1).process = 0; % no processing
+Event(1).seqControl = [1,2];
  SeqControl(2).command = 'transferToHost';
+ SeqControl(2).condition = 'waitForProcessing';
+ SeqControl(2).argument = 2;
  
-Event(3).info = 'Reconstruct';
-Event(3).tx = 0;
-Event(3).rcv = 0;
-Event(3).recon = 1;
-Event(3).process = 5;
+Event(2).info = 'Reconstruct';
+Event(2).tx = 0;
+Event(2).rcv = 0;
+Event(2).recon = 1;
+Event(2).process = 5;
 
 
+Event(3).info = 'Call external Processing function2.';
+Event(3).tx = 0; % no TX structure.
+Event(3).rcv = 0; % no Rcv structure.
+Event(3).recon = 0; % no reconstruction.
+Event(3).process = 2; % call processing function
 
 
-Event(4).info = 'Call external Processing function2.';
+ 
+Event(4).info = 'Call external Processing function3.';
 Event(4).tx = 0; % no TX structure.
 Event(4).rcv = 0; % no Rcv structure.
 Event(4).recon = 0; % no reconstruction.
-Event(4).process = 2; % call processing function
-Event(4).seqControl = [3,4,5]; % wait for data to be transferred 
+Event(4).process = 3; % call processing function 
 
- 
+
 Event(5).info = 'Call external Processing function3.';
 Event(5).tx = 0; % no TX structure.
 Event(5).rcv = 0; % no Rcv structure.
 Event(5).recon = 0; % no reconstruction.
-Event(5).process = 3; % call processing function
-Event(5).seqControl = [3,4,5]; % wait for data to be transferred 
+Event(5).process = 4; % call processing function
 
-
-Event(6).info = 'Call external Processing function3.';
+Event(6).info = 'Call external Processing function1.';
 Event(6).tx = 0; % no TX structure.
 Event(6).rcv = 0; % no Rcv structure.
 Event(6).recon = 0; % no reconstruction.
-Event(6).process = 4; % call processing function
-Event(6).seqControl = [3,4,5]; % wait for data to be transferred 
+Event(6).process = 1; % call processing function
+Event(1).seqControl = 5;
 
 Event(7).info = 'Jump back to Event 1.';
 Event(7).tx = 0; % no TX structure.

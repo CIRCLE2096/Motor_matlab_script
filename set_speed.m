@@ -10,6 +10,8 @@ try
             address_position = ['06';'46'];
         case 'z'
             address_position = ['06';'4A'];
+        case 'u'
+            address_position = ['06';'50'];
     end
     address_num_2 = ['00';'02'];
     Byte_num_4 = '04';
